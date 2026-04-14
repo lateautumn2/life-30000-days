@@ -1,5 +1,8 @@
 <template>
-  <div class="min-h-screen bg-gray-50 text-gray-900 font-sans flex flex-col items-center justify-center relative pb-20">
+  <div
+    class="min-h-screen bg-gray-50 text-gray-900 font-sans flex flex-col items-center justify-center relative"
+    :class="store.token ? 'pb-24' : 'pb-0'"
+  >
     
     <!-- Main Content Area -->
     <main class="w-full h-full max-w-6xl mx-auto flex-1 flex flex-col p-4 md:p-8 relative">
@@ -35,27 +38,34 @@
     </main>
 
     <!-- Unified Bottom Tab Bar for PC & Mobile -->
-    <nav class="fixed bottom-0 w-full max-w-6xl bg-white/80 backdrop-blur-md border-t border-gray-100 flex justify-around items-center h-16 z-40 safe-area-bottom pb-env">
+    <nav
+      v-if="store.token"
+      class="fixed bottom-3 w-[calc(100%-1.5rem)] max-w-xl bg-white/90 backdrop-blur-xl border border-gray-100 rounded-2xl shadow-[0_8px_30px_rgba(15,23,42,0.12)] flex justify-between items-center h-16 px-2 z-40 safe-area-bottom pb-env"
+    >
       <router-link 
         to="/" 
-        class="mobile-tab" 
-        active-class="mobile-tab-active"
+        class="md-tab"
+        active-class="md-tab-active"
+        exact-active-class="md-tab-active"
       >
         <Clock class="w-6 h-6" />
+        <span class="text-[11px] leading-none mt-0.5">倒计时</span>
       </router-link>
       <router-link 
         to="/intersections" 
-        class="mobile-tab" 
-        active-class="mobile-tab-active"
+        class="md-tab"
+        active-class="md-tab-active"
       >
         <Users class="w-6 h-6" />
+        <span class="text-[11px] leading-none mt-0.5">交集</span>
       </router-link>
       <router-link 
         to="/memos" 
-        class="mobile-tab" 
-        active-class="mobile-tab-active"
+        class="md-tab"
+        active-class="md-tab-active"
       >
         <Calendar class="w-6 h-6" />
+        <span class="text-[11px] leading-none mt-0.5">记录</span>
       </router-link>
     </nav>
 
@@ -145,11 +155,14 @@ const saveProfile = async () => {
 
 <style>
 /* Global Styles */
-.mobile-tab {
-  @apply flex flex-col items-center justify-center w-full h-full text-gray-400 transition-all duration-300 hover:text-gray-600;
+.md-tab {
+  @apply flex flex-col items-center justify-center gap-0.5 h-12 min-w-24 rounded-xl text-gray-500 transition-all duration-200;
 }
-.mobile-tab-active {
-  @apply text-gray-900;
+.md-tab:hover {
+  @apply text-gray-700 bg-gray-100/80;
+}
+.md-tab-active {
+  @apply text-gray-900 bg-gray-100 shadow-inner;
 }
 
 /* Page Transitions */

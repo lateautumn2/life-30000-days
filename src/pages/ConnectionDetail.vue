@@ -31,12 +31,32 @@
           <span class="text-gray-400 text-lg md:text-xl ml-4">天</span>
         </div>
 
-        <div class="flex items-baseline justify-center">
-          <span class="text-gray-400 text-base mr-3">剩余可见</span>
+        <div class="relative flex items-baseline justify-center">
+          <span class="text-gray-400 text-base mr-2">剩余可见</span>
+          <button
+            type="button"
+            class="mr-3 text-gray-400 hover:text-gray-600 transition-colors"
+            title="查看计算方式"
+            aria-label="查看剩余可见次数计算方式"
+            @click="showMeetingCalc = !showMeetingCalc"
+          >
+            <CircleHelp class="w-4 h-4" />
+          </button>
           <span class="text-4xl md:text-5xl font-light tracking-tighter text-gray-800 font-sans">
             {{ estimatedMeetings }}
           </span>
           <span class="text-gray-400 text-base ml-3">次</span>
+          <div
+            v-if="showMeetingCalc"
+            class="absolute top-full mt-3 w-72 rounded-2xl border border-gray-200 bg-white/95 backdrop-blur px-4 py-3 text-left shadow-lg z-20"
+          >
+            <div class="text-xs text-gray-700 leading-relaxed space-y-1">
+              <p>计算方式：</p>
+              <p>1. 若无交集记录：按每 30 天可见 1 次估算。</p>
+              <p>2. 若有交集记录：按历史频率估算。</p>
+              <p>公式：剩余可见 = floor(剩余交集天数 × 记录次数 ÷ 首次记录至今天数)。</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -199,7 +219,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Trash2, CalendarDays, X, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { ArrowLeft, Trash2, CalendarDays, X, ChevronLeft, ChevronRight, CircleHelp } from 'lucide-vue-next'
 import { useAppStore } from '@/store'
 import { api } from '@/utils/api'
 import dayjs from 'dayjs'
@@ -212,6 +232,7 @@ const person = ref<any>(null)
 const loading = ref(true)
 const allMemos = ref<any[]>([])
 const previewImage = ref('')
+const showMeetingCalc = ref(false)
 
 const filterMonth = ref('')
 const currentPage = ref(1)
