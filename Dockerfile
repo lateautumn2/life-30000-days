@@ -1,6 +1,11 @@
-FROM node:20-alpine AS builder
+FROM node:20-bookworm-slim AS builder
 
 WORKDIR /app
+
+# Install build dependencies for native modules (sqlite3)
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies
 COPY package*.json ./
@@ -11,12 +16,18 @@ COPY . .
 RUN npm run build
 
 # Production image
-FROM node:20-alpine
+FROM node:20-bookworm-slim
 
 WORKDIR /app
 
-# Copy package files and install only production dependencies
+# Install build dependencies to compile native modules during npm ci
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install production dependencies (force build from source to avoid GLIBC mismatch)
 COPY package*.json ./
+ENV npm_config_build_from_source=true
 RUN npm ci --omit=dev
 
 # Copy built artifacts
