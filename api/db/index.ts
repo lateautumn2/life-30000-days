@@ -28,13 +28,6 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
 function initDb() {
   db.serialize(() => {
-    // Drop existing tables for fresh start
-    db.run(`DROP TABLE IF EXISTS users`)
-    db.run(`DROP TABLE IF EXISTS connections`)
-    db.run(`DROP TABLE IF EXISTS memos`)
-    db.run(`DROP TABLE IF EXISTS quotes`)
-    db.run(`DROP TABLE IF EXISTS settings`)
-
     // Create users table
     db.run(`
       CREATE TABLE IF NOT EXISTS users (
