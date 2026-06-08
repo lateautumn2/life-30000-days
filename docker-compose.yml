@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   app:
-    build: .
+    image: ghcr.io/lateautumn2/life-30000-days:latest
     container_name: life-30000-days
     restart: unless-stopped
     ports:
