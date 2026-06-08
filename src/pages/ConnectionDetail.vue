@@ -15,6 +15,9 @@
           <button @click="$router.back()" class="text-gray-400 hover:text-gray-600 transition-colors">
             <ArrowLeft class="w-6 h-6" />
           </button>
+          <button @click="openEditModal" class="text-gray-400 hover:text-blue-500 transition-colors">
+            <Pencil class="w-6 h-6" />
+          </button>
           <button @click="handleDelete" class="text-gray-400 hover:text-red-500 transition-colors">
             <Trash2 class="w-6 h-6" />
           </button>
@@ -213,13 +216,50 @@
       <img :src="previewImage" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl" @click.stop />
     </div>
 
+    <!-- Edit Connection Modal -->
+    <div v-if="showEditModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-[70] flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="text-xl font-bold text-gray-800">编辑交集人员</h3>
+          <button @click="showEditModal = false" class="text-gray-400 hover:text-gray-600">
+            <X class="w-5 h-5" />
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">姓名</label>
+            <input
+              v-model="editForm.name"
+              type="text"
+              class="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">出生年月</label>
+            <input
+              v-model="editForm.birth_date"
+              type="date"
+              class="w-full px-4 py-2 rounded-xl border border-gray-200 focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <button
+            @click="saveConnection"
+            class="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2.5 rounded-xl transition-all mt-4"
+          >
+            保存
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, Trash2, CalendarDays, X, ChevronLeft, ChevronRight, CircleHelp } from 'lucide-vue-next'
+import { ArrowLeft, Trash2, CalendarDays, X, ChevronLeft, ChevronRight, CircleHelp, Pencil } from 'lucide-vue-next'
 import { useAppStore } from '@/store'
 import { api } from '@/utils/api'
 import dayjs from 'dayjs'
@@ -233,6 +273,11 @@ const loading = ref(true)
 const allMemos = ref<any[]>([])
 const previewImage = ref('')
 const showMeetingCalc = ref(false)
+const showEditModal = ref(false)
+const editForm = ref({
+  name: '',
+  birth_date: '',
+})
 
 const filterMonth = ref('')
 const currentPage = ref(1)
@@ -325,6 +370,24 @@ const handleDelete = async () => {
     router.replace('/intersections')
   } catch (error) {
     console.error('Failed to delete connection', error)
+  }
+}
+
+const openEditModal = () => {
+  if (!person.value) return
+  editForm.value.name = person.value.name || ''
+  editForm.value.birth_date = person.value.birth_date || ''
+  showEditModal.value = true
+}
+
+const saveConnection = async () => {
+  if (!person.value || !editForm.value.name || !editForm.value.birth_date) return
+  try {
+    await api.updateConnection(person.value.id, editForm.value.name, editForm.value.birth_date)
+    showEditModal.value = false
+    await fetchPerson()
+  } catch (error) {
+    console.error('Failed to update connection', error)
   }
 }
 

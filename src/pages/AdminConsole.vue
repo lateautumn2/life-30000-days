@@ -19,6 +19,12 @@
         >
           用户管理
         </button>
+        <button 
+          @click="activeTab = 'backup'"
+          :class="['whitespace-nowrap px-4 py-3 md:mx-4 md:rounded-xl text-left transition-colors font-medium text-sm md:text-base', activeTab === 'backup' ? 'text-blue-600 bg-blue-50' : 'text-gray-600 hover:bg-gray-50']"
+        >
+          数据备份
+        </button>
       </nav>
       <div class="hidden md:block p-4 mt-auto border-t border-gray-100">
         <router-link to="/" class="flex items-center gap-2 text-gray-500 hover:text-blue-600 transition-colors w-full px-4 py-2">
@@ -112,6 +118,74 @@
         </div>
       </div>
 
+      <!-- Backup & Restore -->
+      <div v-if="activeTab === 'backup'" class="max-w-4xl mx-auto space-y-6">
+        <!-- Export Section -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h2 class="text-lg font-bold text-gray-800 mb-4">导出备份</h2>
+          <p class="text-sm text-gray-500 mb-4">将数据库数据导出为文件，建议定期备份。</p>
+          <div class="flex flex-wrap gap-3">
+            <button
+              @click="exportSqlite"
+              :disabled="backingUp"
+              class="flex items-center gap-2 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
+            >
+              <Download class="w-4 h-4" />
+              {{ backingUp && backupFormat === 'sqlite' ? '导出中...' : '导出 SQLite 文件' }}
+            </button>
+            <button
+              @click="exportJson"
+              :disabled="backingUp"
+              class="flex items-center gap-2 px-4 py-2.5 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
+            >
+              <Download class="w-4 h-4" />
+              {{ backingUp && backupFormat === 'json' ? '导出中...' : '导出 JSON 文件' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Import Section -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+          <h2 class="text-lg font-bold text-gray-800 mb-4">导入恢复</h2>
+          <p class="text-sm text-red-500 mb-4 font-medium">
+            警告：恢复操作将替换当前所有数据，请确认备份文件无误后再执行。
+          </p>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">选择备份文件（.sqlite 或 .json）</label>
+              <input
+                ref="fileInputRef"
+                type="file"
+                accept=".sqlite,.json"
+                @change="onFileSelected"
+                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-600 hover:file:bg-blue-100"
+              />
+            </div>
+            <div v-if="selectedFile" class="flex items-center gap-3">
+              <span class="text-sm text-gray-600">已选择: {{ selectedFile.name }}</span>
+              <button
+                @click="restoreFile"
+                :disabled="restoring"
+                class="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
+              >
+                <Upload class="w-4 h-4" />
+                {{ restoring ? '恢复中...' : '确认恢复' }}
+              </button>
+              <button
+                @click="clearFile"
+                :disabled="restoring"
+                class="px-3 py-2 text-gray-500 hover:text-gray-700 text-sm"
+              >
+                取消
+              </button>
+            </div>
+            <div v-if="restoreMessage" :class="['text-sm p-3 rounded-xl', restoreError ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600']">
+              {{ restoreMessage }}
+            </div>
+          </div>
+        </div>
+      </div>
+
     </main>
 
     <!-- Add Quote Modal -->
@@ -140,7 +214,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { ArrowLeft, Trash2 } from 'lucide-vue-next'
+import { ArrowLeft, Trash2, Download, Upload } from 'lucide-vue-next'
 import { api } from '@/utils/api'
 import { useAppStore } from '@/store'
 
@@ -153,6 +227,105 @@ const users = ref<any[]>([])
 
 const showAddQuoteModal = ref(false)
 const newQuote = ref({ content: '', source: '' })
+
+// Backup & Restore state
+const backingUp = ref(false)
+const backupFormat = ref('')
+const restoring = ref(false)
+const restoreMessage = ref('')
+const restoreError = ref(false)
+const selectedFile = ref<File | null>(null)
+const fileInputRef = ref<HTMLInputElement | null>(null)
+
+const exportSqlite = async () => {
+  backingUp.value = true
+  backupFormat.value = 'sqlite'
+  try {
+    await api.adminBackupSqlite()
+  } catch (error: any) {
+    alert(error.message || '导出失败')
+  } finally {
+    backingUp.value = false
+    backupFormat.value = ''
+  }
+}
+
+const exportJson = async () => {
+  backingUp.value = true
+  backupFormat.value = 'json'
+  try {
+    await api.adminBackupJson()
+  } catch (error: any) {
+    alert(error.message || '导出失败')
+  } finally {
+    backingUp.value = false
+    backupFormat.value = ''
+  }
+}
+
+const onFileSelected = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  if (target.files && target.files.length > 0) {
+    selectedFile.value = target.files[0]
+    restoreMessage.value = ''
+    restoreError.value = false
+  }
+}
+
+const clearFile = () => {
+  selectedFile.value = null
+  restoreMessage.value = ''
+  restoreError.value = false
+  if (fileInputRef.value) {
+    fileInputRef.value.value = ''
+  }
+}
+
+const restoreFile = async () => {
+  if (!selectedFile.value) return
+  if (!confirm('警告：此操作将替换当前所有数据，且不可撤销。确定继续吗？')) return
+
+  restoring.value = true
+  restoreMessage.value = ''
+  restoreError.value = false
+
+  try {
+    const file = selectedFile.value
+    const isSqlite = file.name.endsWith('.sqlite')
+
+    if (isSqlite) {
+      const buffer = await file.arrayBuffer()
+      const base64 = arrayBufferToBase64(buffer)
+      const result = await api.adminRestore('sqlite', base64)
+      restoreMessage.value = result.message || '恢复成功'
+    } else {
+      const text = await file.text()
+      const json = JSON.parse(text)
+      // Extract data from the API response wrapper or use the raw object
+      const backupData = json.data || json
+      const result = await api.adminRestore('json', backupData)
+      restoreMessage.value = result.message || '恢复成功'
+    }
+  } catch (error: any) {
+    restoreError.value = true
+    restoreMessage.value = error.message || '恢复失败'
+  } finally {
+    restoring.value = false
+    selectedFile.value = null
+    if (fileInputRef.value) {
+      fileInputRef.value.value = ''
+    }
+  }
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  return btoa(binary)
+}
 
 const fetchSettings = async () => {
   try {

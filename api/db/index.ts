@@ -17,14 +17,49 @@ if (!fs.existsSync(dbDir)) {
   fs.mkdirSync(dbDir, { recursive: true })
 }
 
-const db = new sqlite3.Database(dbPath, (err) => {
-  if (err) {
-    console.error('Error connecting to SQLite database', err)
-  } else {
-    console.log('Connected to SQLite database.')
-    initDb()
-  }
-})
+let db: sqlite3.Database
+
+export function getDbPath(): string {
+  return dbPath
+}
+
+function createConnection(): void {
+  db = new sqlite3.Database(dbPath, (err) => {
+    if (err) {
+      console.error('Error connecting to SQLite database', err)
+    } else {
+      console.log('Connected to SQLite database.')
+      initDb()
+    }
+  })
+}
+
+export async function replaceDatabaseFile(sourcePath: string): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    db.close((closeErr) => {
+      if (closeErr) {
+        createConnection()
+        reject(new Error(`关闭数据库失败: ${closeErr.message}`))
+        return
+      }
+      try {
+        fs.copyFileSync(sourcePath, dbPath)
+      } catch (copyErr: any) {
+        createConnection()
+        reject(new Error(`替换数据库文件失败: ${copyErr.message}`))
+        return
+      }
+      try {
+        createConnection()
+        resolve()
+      } catch (reopenErr: any) {
+        reject(new Error(`重新打开数据库失败: ${reopenErr.message}`))
+      }
+    })
+  })
+}
+
+createConnection()
 
 function initDb() {
   db.serialize(() => {
